@@ -33,6 +33,7 @@ app.use(
     crossOriginResourcePolicy: { policy: "same-origin" },
     strictTransportSecurity: { maxAge: 31536000, includeSubDomains: true },
     referrerPolicy: { policy: "no-referrer" },
+    frameguard: { action: "deny" },
   })
 );
 app.use(requestId);

@@ -48,7 +48,7 @@ async function upsertDoctor({ email, fullName, specialization, experienceYears }
   const doctorProfile = {
     specialization,
     experienceYears,
-    clinicName: "CarePulse Health",
+    clinicName: "Dr Sahayak",
     isAcceptingAppointments: true,
   };
 
