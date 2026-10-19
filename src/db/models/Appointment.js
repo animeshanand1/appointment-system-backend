@@ -72,6 +72,8 @@ const appointmentSchema = new Schema(
     statusHistory: { type: [statusHistoryEntrySchema], default: [] },
     rescheduleRequest: { type: rescheduleRequestSchema, default: undefined },
     rescheduleHistory: { type: [rescheduleHistoryEntrySchema], default: [] },
+    // The startAt a reminder email was sent for, so a moved appointment gets a new one.
+    reminderSentFor: { type: Date },
   },
   { timestamps: true, strict: "throw" }
 );
@@ -95,5 +97,7 @@ appointmentSchema.index(
   { doctorId: 1, startAt: 1 },
   { name: "doctor_pending_reschedules", partialFilterExpression: { "rescheduleRequest.status": "pending" } }
 );
+
+appointmentSchema.index({ status: 1, startAt: 1 }, { name: "upcoming_by_start" });
 
 export const Appointment = model("Appointment", appointmentSchema, "appointments");

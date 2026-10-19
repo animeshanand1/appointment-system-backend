@@ -8,13 +8,16 @@ import { pathToFileURL } from "node:url";
 import argon2 from "argon2";
 import mongoose from "mongoose";
 import { connectDB } from "../src/db/connection.js";
-import { Doctor, DoctorAvailability, Patient, User } from "../src/db/models/index.js";
+import { Admin, Doctor, DoctorAvailability, Patient, User } from "../src/db/models/index.js";
 
 const TIMEZONE = process.env.SEED_TIMEZONE || "America/New_York";
 // Demo passwords are public (they're in the frontend's dev build). Override
 // them with SEED_DOCTOR_PASSWORD / SEED_PATIENT_PASSWORD for shared environments.
 const DOCTOR_PASSWORD = process.env.SEED_DOCTOR_PASSWORD || "doctor@2026";
 const PATIENT_PASSWORD = process.env.SEED_PATIENT_PASSWORD || "patient@2026";
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "admin@2026";
+
+export const DEMO_ADMIN = { email: "admin@carepulse.org", fullName: "Demo Admin" };
 
 export const DEMO_PATIENT = { email: "sarah.jenkins@carepulse.org", fullName: "Sarah Jenkins", password: PATIENT_PASSWORD };
 
@@ -83,6 +86,10 @@ export async function seedDemoData() {
       timezone: TIMEZONE,
     });
   }
+
+  if (!(await User.exists({ email: DEMO_ADMIN.email }))) {
+    await Admin.create({ ...DEMO_ADMIN, passwordHash: await argon2.hash(ADMIN_PASSWORD, { type: argon2.argon2id }) });
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -93,6 +100,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   }
   await connectDB();
   await seedDemoData();
-  console.log(`Seeded ${DEMO_DOCTORS.length} doctors (${TIMEZONE}) and demo patient ${DEMO_PATIENT.email}`);
+  console.log(`Seeded ${DEMO_DOCTORS.length} doctors (${TIMEZONE}), demo patient ${DEMO_PATIENT.email} and admin ${DEMO_ADMIN.email}`);
   await mongoose.disconnect();
 }

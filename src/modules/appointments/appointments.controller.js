@@ -17,6 +17,7 @@ import {
   withdrawRescheduleRequest,
 } from "./appointments.service.js";
 import { AppError } from "../../lib/errors.js";
+import { notifyAppointment } from "../notifications/notifications.service.js";
 
 export async function book(req, res, next) {
   try {
@@ -24,6 +25,7 @@ export async function book(req, res, next) {
     const { appointment, replayed } = await bookAppointment(req.auth, input);
 
     if (replayed) return res.status(200).json({ data: appointment, meta: { replayed: true } });
+    notifyAppointment("booked", appointment.id);
     res.location(`/api/appointments/${appointment.id}`).status(201).json({ data: appointment });
   } catch (err) {
     next(err);
@@ -60,6 +62,7 @@ export async function changeStatus(req, res, next) {
   try {
     const input = updateStatusSchema.parse(req.body);
     const { appointment, unchanged } = await updateStatus(req.auth, req.params.id, input);
+    if (!unchanged && input.status === "cancelled") notifyAppointment("cancelled", appointment.id);
     res.status(200).json({ data: appointment, ...(unchanged ? { meta: { unchanged: true } } : {}) });
   } catch (err) {
     next(err);
@@ -70,6 +73,7 @@ export async function reschedule(req, res, next) {
   try {
     const input = rescheduleSchema.parse(req.body);
     const appointment = await rescheduleAppointment(req.auth, req.params.id, input);
+    notifyAppointment("moved", appointment.id, { reason: input.reason });
     res.status(200).json({ data: appointment });
   } catch (err) {
     next(err);
@@ -80,6 +84,7 @@ export async function putRescheduleRequest(req, res, next) {
   try {
     const input = rescheduleRequestSchema.parse(req.body);
     const { appointment, unchanged } = await requestReschedule(req.auth, req.params.id, input);
+    if (!unchanged) notifyAppointment("reschedule_requested", appointment.id);
     res.status(200).json({ data: appointment, ...(unchanged ? { meta: { unchanged: true } } : {}) });
   } catch (err) {
     next(err);
@@ -99,6 +104,7 @@ export async function decideReschedule(req, res, next) {
   try {
     const input = rescheduleDecisionSchema.parse(req.body);
     const appointment = await decideRescheduleRequest(req.auth, req.params.id, input);
+    notifyAppointment("reschedule_decided", appointment.id, { approved: input.decision === "approve" });
     res.status(200).json({ data: appointment });
   } catch (err) {
     next(err);

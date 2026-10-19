@@ -53,6 +53,41 @@ export const registerHourlyLimiter = limiter({
   message: "Too many accounts created from this network. Please try again later.",
 });
 
+const emailKey = (prefix) => (req) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase().slice(0, 254) : "";
+  return email ? `${prefix}:${email}` : `${prefix}-ip:${req.ip}`;
+};
+
+// Password reset requests: per IP, and per target account so nobody can flood
+// someone's inbox with reset emails.
+export const forgotPasswordLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 5,
+  message: "Too many reset requests. Please try again in 15 minutes.",
+});
+
+export const forgotPasswordAccountLimiter = limiter({
+  windowMs: 60 * MINUTE,
+  limit: 3,
+  keyGenerator: emailKey("forgot"),
+  message: "Too many reset requests for this account. Please try again later.",
+});
+
+export const resetPasswordLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 10,
+  message: "Too many attempts. Please try again in 15 minutes.",
+});
+
+// Runs after authenticate: wrong current-password guesses per user.
+export const changePasswordLimiter = limiter({
+  windowMs: 15 * MINUTE,
+  limit: 5,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => req.auth.userId,
+  message: "Too many attempts. Please try again in 15 minutes.",
+});
+
 export const slotsLimiter = limiter({
   windowMs: MINUTE,
   limit: 60,

@@ -17,6 +17,7 @@ import { healthRouter } from "./modules/health/health.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { doctorsRouter } from "./modules/doctors/doctors.routes.js";
 import { appointmentsRouter } from "./modules/appointments/appointments.routes.js";
+import { adminRouter } from "./modules/admin/admin.routes.js";
 
 export const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/auth/register", authLimiter, registerHourlyLimiter);
 app.use("/api/auth", authRouter);
 app.use("/api/doctors", doctorsRouter);
 app.use("/api/appointments", appointmentsRouter);
+app.use("/api/admin", adminRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

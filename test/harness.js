@@ -22,7 +22,7 @@ const { app } = await import("../src/app.js");
 const models = await import("../src/db/models/index.js");
 const { signSession, SESSION_COOKIE_NAME } = await import("../src/lib/jwt.js");
 
-export const { Appointment, Doctor, DoctorAvailability, Patient, User } = models;
+export const { Admin, Appointment, Doctor, DoctorAvailability, InviteCode, Patient, User } = models;
 
 export const TZ = "Asia/Kolkata";
 export const PASSWORD = "a-long-passphrase-2026";
@@ -127,6 +127,11 @@ export async function createDoctor({
     });
   }
   return { id: String(doctor._id), email, cookie: await cookieFor(doctor), user: doctor };
+}
+
+export async function createAdmin({ fullName = "Hospital Admin", email = uniqueEmail("admin") } = {}) {
+  const admin = await Admin.create({ email, passwordHash, fullName });
+  return { id: String(admin._id), email, cookie: await cookieFor(admin), user: admin };
 }
 
 const today = () => DateTime.now().setZone(TZ).startOf("day");

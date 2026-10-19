@@ -8,7 +8,8 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "seed": "node scripts/seed.js",
-    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\""
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\"",
+    "create-admin": "node scripts/create-admin.js"
   },
   "dependencies": {
     "argon2": "^0.41.1",
@@ -20,6 +21,7 @@
     "jose": "^5.9.6",
     "luxon": "^3.5.0",
     "mongoose": "^8.9.5",
+    "nodemailer": "10.0.15",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
     "zod": "^3.24.1"
