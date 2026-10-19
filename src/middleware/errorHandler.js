@@ -15,6 +15,16 @@ function isTransientDbError(err) {
   return TRANSIENT_DB_ERRORS.has(err?.name) || err?.hasErrorLabel?.("RetryableWriteError") === true;
 }
 
+// Errors raised by express.json() before a route runs. Without this they'd fall
+// through to the generic handler and come back as a 500.
+const BODY_PARSER_ERRORS = {
+  "entity.parse.failed": { status: 400, code: "MALFORMED_JSON", message: "Request body is not valid JSON" },
+  "entity.too.large": { status: 413, code: "PAYLOAD_TOO_LARGE", message: "Request body is too large" },
+  "encoding.unsupported": { status: 415, code: "UNSUPPORTED_MEDIA_TYPE", message: "Unsupported content encoding" },
+  "charset.unsupported": { status: 415, code: "UNSUPPORTED_MEDIA_TYPE", message: "Unsupported charset" },
+  "request.aborted": { status: 400, code: "VALIDATION_FAILED", message: "Request was aborted" },
+};
+
 export function notFoundHandler(req, res) {
   res.status(404).json({
     error: { code: "NOT_FOUND", message: "Route not found", requestId: req.id },
@@ -34,6 +44,11 @@ export function errorHandler(err, req, res, next) {
         requestId,
       },
     });
+  }
+
+  const bodyError = BODY_PARSER_ERRORS[err?.type];
+  if (bodyError) {
+    return res.status(bodyError.status).json({ error: { code: bodyError.code, message: bodyError.message, requestId } });
   }
 
   if (err instanceof AppError) {

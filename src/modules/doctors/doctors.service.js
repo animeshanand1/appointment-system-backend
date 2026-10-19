@@ -14,7 +14,7 @@ export const listDoctorsQuerySchema = z
   .object({
     specialization: z.string().trim().toLowerCase().min(1).max(60).optional(),
     q: z.string().trim().min(2, "Search needs at least 2 characters").max(100).optional(),
-    page: z.coerce.number().int().min(1).default(1),
+    page: z.coerce.number().int().min(1).max(1000).default(1),
     limit: z.coerce.number().int().min(1).max(50).default(20),
   })
   .strict();
