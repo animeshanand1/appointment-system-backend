@@ -1,5 +1,5 @@
 import argon2 from "argon2";
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { User, Patient, Doctor, DoctorAvailability } from "../../db/models/index.js";
 import { AppError } from "../../lib/errors.js";
 import { env } from "../../config/env.js";
@@ -24,12 +24,19 @@ function toUserDTO(user, { hasAvailability = false } = {}) {
   return dto;
 }
 
+// Compares fixed-length digests so neither the content nor the length of the
+// secret leaks through timing.
 function safeCompare(a, b) {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
+  const digest = (value) => createHash("sha256").update(String(value)).digest();
+  return timingSafeEqual(digest(a), digest(b));
 }
+
+// Verified against when the email is unknown, so a login for a missing account
+// takes as long as one with a wrong password and can't be used to discover
+// which emails are registered.
+const dummyHash = argon2.hash("timing-equalizer-not-a-real-password", { type: argon2.argon2id });
+
+const invalidCredentials = () => new AppError("INVALID_CREDENTIALS", "Invalid email or password", { status: 401 });
 
 export async function registerUser(input) {
   if (input.role === "doctor" && !safeCompare(input.inviteCode, env.DOCTOR_INVITE_CODE)) {
@@ -64,10 +71,9 @@ export async function withAvailabilityFlag(user) {
 
 export async function authenticateUser(email, password) {
   const user = await User.findOne({ email }).select("+passwordHash +tokenVersion");
-  if (!user) throw new AppError("INVALID_CREDENTIALS", "Invalid email or password", { status: 401 });
-
-  const isValid = await argon2.verify(user.passwordHash, password);
-  if (!isValid) throw new AppError("INVALID_CREDENTIALS", "Invalid email or password", { status: 401 });
+  const isValid = await argon2.verify(user?.passwordHash ?? (await dummyHash), password).catch(() => false);
+  // A deactivated account gets the same answer as a wrong password.
+  if (!user || !isValid || !user.isActive) throw invalidCredentials();
 
   user.lastLoginAt = new Date();
   await user.save();

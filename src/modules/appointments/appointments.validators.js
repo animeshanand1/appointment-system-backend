@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isTickAligned, isValidLocalDate } from "../../lib/time.js";
+import { multilineText, text } from "../../lib/sanitize.js";
 
 const STATUSES = ["booked", "cancelled", "completed", "no_show"];
 
@@ -11,17 +12,14 @@ const slotStart = z
   .transform((value) => new Date(value))
   .refine(isTickAligned, "startAt must fall on a 5-minute boundary with zero seconds");
 
-const optionalText = (max) => z.string().trim().max(max).optional();
+const optionalText = (max) => text({ max }).optional();
 
 // endAt, patientId and status are derived by the server; strict() rejects them.
 export const bookAppointmentSchema = z
   .object({
     doctorId: objectId,
     startAt: slotStart,
-    patientNotes: z
-      .string()
-      .trim()
-      .max(500)
+    patientNotes: multilineText({ max: 500 })
       .transform((value) => value || undefined)
       .optional(),
   })
@@ -37,7 +35,8 @@ export const listAppointmentsQuerySchema = z
       .optional(),
     date: z.string().refine(isValidLocalDate, "Expected a real calendar date in YYYY-MM-DD format").optional(),
     reschedule: z.enum(["pending"]).optional(),
-    page: z.coerce.number().int().min(1).default(1),
+    // Capped so a huge page number can't force an expensive skip.
+    page: z.coerce.number().int().min(1).max(1000).default(1),
     limit: z.coerce.number().int().min(1).max(50).default(20),
   })
   .strict();

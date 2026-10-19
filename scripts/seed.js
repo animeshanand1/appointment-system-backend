@@ -11,8 +11,10 @@ import { connectDB } from "../src/db/connection.js";
 import { Doctor, DoctorAvailability, Patient, User } from "../src/db/models/index.js";
 
 const TIMEZONE = process.env.SEED_TIMEZONE || "America/New_York";
-const DOCTOR_PASSWORD = "doctor@2026";
-const PATIENT_PASSWORD = "patient@2026";
+// Demo passwords are public (they're in the frontend's dev build). Override
+// them with SEED_DOCTOR_PASSWORD / SEED_PATIENT_PASSWORD for shared environments.
+const DOCTOR_PASSWORD = process.env.SEED_DOCTOR_PASSWORD || "doctor@2026";
+const PATIENT_PASSWORD = process.env.SEED_PATIENT_PASSWORD || "patient@2026";
 
 export const DEMO_PATIENT = { email: "sarah.jenkins@carepulse.org", fullName: "Sarah Jenkins", password: PATIENT_PASSWORD };
 
@@ -84,6 +86,11 @@ export async function seedDemoData() {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  // Demo accounts with known passwords would be a backdoor on a real deployment.
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "true") {
+    console.error("Refusing to seed demo accounts with NODE_ENV=production (set ALLOW_DEMO_SEED=true to override).");
+    process.exit(1);
+  }
   await connectDB();
   await seedDemoData();
   console.log(`Seeded ${DEMO_DOCTORS.length} doctors (${TIMEZONE}) and demo patient ${DEMO_PATIENT.email}`);

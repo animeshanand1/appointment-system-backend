@@ -1,7 +1,8 @@
 // Input schemas for the doctor self-service endpoints. The schedule invariants
 // are listed in docs/architecture/02-data-model.md §2.2.
 import { z } from "zod";
-import { isValidLocalDate, isValidTimeZone, parseHHmm } from "../../lib/time.js";
+import { isValidLocalDate, parseHHmm } from "../../lib/time.js";
+import { multilineText, text, timeZone } from "../../lib/sanitize.js";
 import { workingWindows } from "../slots/slot.engine.js";
 
 const SLOT_DURATIONS = [10, 15, 20, 30, 45, 60];
@@ -95,7 +96,7 @@ export const availabilitySchema = z
   .object({
     // null on the first save; afterwards it must equal the stored revision.
     revision: z.number().int().min(0).nullable(),
-    timezone: z.string().refine(isValidTimeZone, "Expected an IANA time zone such as Asia/Kolkata"),
+    timezone: timeZone,
     slotDurationMinutes: z.number().refine((value) => SLOT_DURATIONS.includes(value), {
       message: `Slot length must be one of ${SLOT_DURATIONS.join(", ")} minutes`,
     }),
@@ -149,10 +150,7 @@ export const createTimeOffSchema = z
   .object({
     startLocal: localDateTime,
     endLocal: localDateTime,
-    reason: z
-      .string()
-      .trim()
-      .max(200)
+    reason: text({ max: 200 })
       .transform((value) => value || undefined)
       .optional(),
     dryRun: z.boolean().default(false),
@@ -173,11 +171,11 @@ export const listTimeOffQuerySchema = z
 // Partial update: at least one key, null clears an optional text field.
 export const updateProfileSchema = z
   .object({
-    qualifications: z.array(z.string().trim().min(1).max(100)).max(10),
+    qualifications: z.array(text({ min: 1, max: 100 })).max(10),
     experienceYears: z.number().int().min(0).max(70).nullable(),
-    bio: z.string().trim().max(1000).nullable(),
-    clinicName: z.string().trim().max(120).nullable(),
-    clinicAddress: z.string().trim().max(300).nullable(),
+    bio: multilineText({ max: 1000 }).nullable(),
+    clinicName: text({ max: 120 }).nullable(),
+    clinicAddress: text({ max: 300 }).nullable(),
     isAcceptingAppointments: z.boolean(),
   })
   .partial()

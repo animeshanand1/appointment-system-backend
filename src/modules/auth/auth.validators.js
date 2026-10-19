@@ -1,12 +1,13 @@
 import { z } from "zod";
+import { email, multilineText, newPassword, personName, text, timeZone } from "../../lib/sanitize.js";
 
 const baseRegisterSchema = z.object({
-  fullName: z.string().trim().min(2).max(100),
-  email: z.string().trim().toLowerCase().max(254).email(),
+  fullName: personName,
+  email,
   phone: z.string().trim().regex(/^\d{1,10}$/, "Phone number must contain at most 10 digits").optional(),
-  password: z.string().min(8).max(128),
-  timezone: z.string().min(1).optional(),
-});
+  password: newPassword,
+  timezone: timeZone.optional(),
+}).strict();
 
 const patientRegisterSchema = baseRegisterSchema.extend({
   role: z.literal("patient"),
@@ -14,15 +15,17 @@ const patientRegisterSchema = baseRegisterSchema.extend({
 
 const doctorRegisterSchema = baseRegisterSchema.extend({
   role: z.literal("doctor"),
-  inviteCode: z.string().min(1),
-  doctorProfile: z.object({
-    specialization: z.string().min(1),
-    qualifications: z.array(z.string().max(100)).max(10).optional(),
-    experienceYears: z.number().int().min(0).max(70).optional(),
-    bio: z.string().max(1000).optional(),
-    clinicName: z.string().max(120).optional(),
-    clinicAddress: z.string().max(300).optional(),
-  }),
+  inviteCode: z.string().min(1).max(128),
+  doctorProfile: z
+    .object({
+      specialization: text({ min: 1, max: 60 }),
+      qualifications: z.array(text({ min: 1, max: 100 })).max(10).optional(),
+      experienceYears: z.number().int().min(0).max(70).optional(),
+      bio: multilineText({ max: 1000 }).optional(),
+      clinicName: text({ max: 120 }).optional(),
+      clinicAddress: text({ max: 300 }).optional(),
+    })
+    .strict(),
 });
 
 export const registerSchema = z
@@ -35,11 +38,16 @@ export const registerSchema = z
     path: ["password"],
   });
 
-export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email(),
-  password: z.string().min(1),
-});
+// Bounded so an oversized password can't make argon2 burn CPU.
+export const loginSchema = z
+  .object({
+    email,
+    password: z.string().min(1).max(128),
+  })
+  .strict();
 
-export const logoutSchema = z.object({
-  allDevices: z.boolean().optional(),
-});
+export const logoutSchema = z
+  .object({
+    allDevices: z.boolean().optional(),
+  })
+  .strict();
