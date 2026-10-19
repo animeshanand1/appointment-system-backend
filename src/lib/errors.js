@@ -1,0 +1,39 @@
+export class AppError extends Error {
+  constructor(code, message, { status = 500, details } = {}) {
+    super(message);
+    this.name = "AppError";
+    this.code = code;
+    this.status = status;
+    this.details = details;
+  }
+}
+
+// See docs/architecture/04-api-specification.md §4.1 for the full catalogue.
+export const ErrorCodes = {
+  VALIDATION_FAILED: 400,
+  UNAUTHENTICATED: 401,
+  INVALID_CREDENTIALS: 401,
+  FORBIDDEN_ROLE: 403,
+  INVALID_INVITE_CODE: 403,
+  FORBIDDEN_TRANSITION: 403,
+  DOCTOR_NOT_FOUND: 404,
+  APPOINTMENT_NOT_FOUND: 404,
+  TIME_OFF_NOT_FOUND: 404,
+  EMAIL_ALREADY_REGISTERED: 409,
+  SLOT_UNAVAILABLE: 409,
+  PATIENT_TIME_CONFLICT: 409,
+  INVALID_STATUS_TRANSITION: 409,
+  STALE_REVISION: 409,
+  RESCHEDULE_NOT_PENDING: 409,
+  CONFLICT: 409,
+  DOCTOR_NOT_ACCEPTING: 422,
+  SLOT_NOT_BOOKABLE: 422,
+  BOOKING_LIMIT_REACHED: 422,
+  CANCELLATION_CLOSED: 422,
+  RESCHEDULE_CLOSED: 422,
+  TRANSITION_TOO_EARLY: 422,
+  REASON_REQUIRED: 422,
+  RATE_LIMITED: 429,
+  SERVICE_UNAVAILABLE: 503,
+  INTERNAL_ERROR: 500,
+};
