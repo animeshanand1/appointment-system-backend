@@ -11,7 +11,7 @@ process.env.JWT_SECRET ??= "test-secret-that-is-at-least-32-characters-long";
 process.env.DOCTOR_INVITE_CODE ??= "test-invite-code";
 
 const { app } = await import("../src/app.js");
-const { User } = await import("../src/db/models/index.js");
+const { InviteCode, User } = await import("../src/db/models/index.js");
 const { authenticateUser, registerUser } = await import("../src/modules/auth/auth.service.js");
 const { loginSchema, registerSchema } = await import("../src/modules/auth/auth.validators.js");
 const { bookAppointmentSchema } = await import("../src/modules/appointments/appointments.validators.js");
@@ -152,7 +152,8 @@ describe("login rules", () => {
     assert.equal(save.mock.callCount(), 0);
   });
 
-  it("rejects a wrong doctor invite code before touching the database", async () => {
+  it("rejects a wrong doctor invite code before creating an account", async (t) => {
+    t.mock.method(InviteCode, "findOneAndUpdate", () => ({ lean: async () => null }));
     await assert.rejects(
       registerUser({ role: "doctor", inviteCode: "guess", password: "a-long-passphrase-2026" }),
       { code: "INVALID_INVITE_CODE" }

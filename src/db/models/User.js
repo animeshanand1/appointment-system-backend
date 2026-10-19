@@ -14,7 +14,7 @@ const userSchema = new Schema(
       unique: true,
     },
     passwordHash: { type: String, required: true, select: false },
-    role: { type: String, enum: ["patient", "doctor"], required: true, immutable: true },
+    role: { type: String, enum: ["patient", "doctor", "admin"], required: true, immutable: true },
     fullName: { type: String, required: true, trim: true, minlength: 2, maxlength: 100 },
     // Digits only, max 10 (Zod is primary; this is the backstop).
     phone: { type: String, match: [/^\d{1,10}$/, "Phone number must contain at most 10 digits"] },
@@ -22,6 +22,14 @@ const userSchema = new Schema(
     isActive: { type: Boolean, default: true },
     tokenVersion: { type: Number, default: 0, min: 0, select: false },
     lastLoginAt: { type: Date },
+    passwordChangedAt: { type: Date },
+    // Only a SHA-256 hash of the emailed token is stored, so a database leak
+    // doesn't hand out working reset links. Single use: cleared on success.
+    passwordReset: {
+      type: new Schema({ tokenHash: { type: String, required: true }, expiresAt: { type: Date, required: true } }, { _id: false }),
+      default: undefined,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -33,6 +41,11 @@ const userSchema = new Schema(
 userSchema.index(
   { role: 1, "doctorProfile.isAcceptingAppointments": 1, "doctorProfile.specialization": 1, fullName: 1 },
   { name: "doctor_directory", partialFilterExpression: { role: "doctor" } }
+);
+
+userSchema.index(
+  { "passwordReset.tokenHash": 1 },
+  { name: "password_reset_token", partialFilterExpression: { "passwordReset.tokenHash": { $exists: true } } }
 );
 
 export const User = model("User", userSchema, "users");
@@ -67,3 +80,7 @@ export const Doctor = User.discriminator(
   "doctor",
   new Schema({ doctorProfile: { type: doctorProfileSchema, required: true } }, { strict: "throw" })
 );
+
+// Hospital staff who manage accounts and invite codes. Never self-registered:
+// created with `npm run create-admin`.
+export const Admin = User.discriminator("admin", new Schema({}, { strict: "throw" }));

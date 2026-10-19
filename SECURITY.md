@@ -12,8 +12,17 @@
 - The session is a JWT (HS256) carrying issuer, audience and max-age claims,
   stored in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` in production).
   `tokenVersion` revokes sessions ("log out all devices").
-- The doctor invite code is compared through fixed-length SHA-256 digests in
-  constant time.
+- Doctors register with single-use invite codes issued by an admin. Each code
+  is stored only as a SHA-256 hash, can be locked to one email, expires, and
+  can be revoked. It is claimed atomically, so two registrations can't share
+  one. The optional legacy shared code is compared in constant time.
+- Password reset links carry a random 256-bit token. Only its hash is stored;
+  the token is single-use and expires after 30 minutes. A reset or password
+  change signs out every other session. `forgot-password` answers the same way
+  whether or not the account exists, and is rate-limited per IP and per
+  account.
+- Admins can't self-register (`npm run create-admin`), can't change their own
+  status or other admins, and deactivating a user revokes their sessions.
 
 **CSRF and the browser boundary**
 - State-changing requests are rejected when `Origin` isn't `APP_ORIGIN`, or
@@ -49,6 +58,9 @@
 | Bookings, per user | 10/min |
 | Doctor edits, per user | 20/min |
 | Other writes, per user | 30/min |
+| Reset emails, per IP / per account | 5 per 15 min / 3 per hour |
+| Reset attempts, per IP | 10 per 15 min |
+| Wrong current password, per user | 5 per 15 min |
 
 Every 429 carries `Retry-After`. Other caps:
 - JSON bodies are limited to 16 KB, and malformed or oversized bodies get a
@@ -59,6 +71,9 @@ Every 429 carries `Retry-After`. Other caps:
 
 **Operations**
 - Logs redact cookies, `Set-Cookie`, passwords, hashes and invite codes.
+  Email bodies (which can contain reset links) are logged only in development.
+- Email templates HTML-escape every inserted value. Nodemailer runs with file
+  and URL access disabled.
 - Clients get generic 5xx messages; details go only to the logs.
 - In production the app refuses to start with the example `JWT_SECRET`, an
   invite code shorter than 16 characters, or a non-https `APP_ORIGIN`.

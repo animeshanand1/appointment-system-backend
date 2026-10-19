@@ -4,6 +4,7 @@ import {
   listTimeOffQuerySchema,
 } from "./availability.validators.js";
 import { createTimeOff, deleteTimeOff, getAvailability, listTimeOff, saveAvailability } from "./availability.service.js";
+import { notifyAppointment } from "../notifications/notifications.service.js";
 
 export async function getMine(req, res, next) {
   try {
@@ -36,6 +37,7 @@ export async function addTimeOff(req, res, next) {
   try {
     const input = createTimeOffSchema.parse(req.body);
     const { timeOff, dryRun, ...meta } = await createTimeOff(req.auth, input);
+    for (const id of meta.cancelledAppointmentIds ?? []) notifyAppointment("cancelled", id);
     res.status(dryRun ? 200 : 201).json({ data: timeOff, meta });
   } catch (err) {
     next(err);

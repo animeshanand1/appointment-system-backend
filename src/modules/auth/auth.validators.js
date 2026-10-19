@@ -46,6 +46,53 @@ export const loginSchema = z
   })
   .strict();
 
+export const forgotPasswordSchema = z.object({ email }).strict();
+
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().regex(/^[a-f\d]{64}$/i, "Invalid or expired reset link"),
+    password: newPassword,
+  })
+  .strict();
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(128),
+    newPassword,
+  })
+  .strict()
+  .refine((input) => input.currentPassword !== input.newPassword, {
+    message: "Choose a password you haven't used here before",
+    path: ["newPassword"],
+  });
+
+const pastDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
+  .refine((value) => {
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value) && date < new Date() && value >= "1900-01-01";
+  }, "Enter a real date in the past");
+
+// Partial update of the signed-in user's own profile. Email and role can't
+// change here; null clears an optional field.
+export const updateMeSchema = z
+  .object({
+    fullName: personName,
+    phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits").nullable(),
+    timezone: timeZone,
+    patientProfile: z
+      .object({
+        dateOfBirth: pastDate.nullable(),
+        gender: z.enum(["female", "male", "other", "prefer_not_to_say"]).nullable(),
+      })
+      .partial()
+      .strict(),
+  })
+  .partial()
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, "Provide at least one field to update");
+
 export const logoutSchema = z
   .object({
     allDevices: z.boolean().optional(),

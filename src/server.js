@@ -4,6 +4,8 @@ import { app } from "./app.js";
 import { connectDB } from "./db/connection.js";
 import { assertCriticalIndexes } from "./db/assertIndexes.js";
 import { logger } from "./lib/logger.js";
+import { startReminderJob } from "./jobs/reminders.js";
+import { flushNotifications } from "./modules/notifications/notifications.service.js";
 
 // Bounded timeouts so slow or idle connections (slowloris-style attacks)
 // can't hold sockets open indefinitely.
@@ -22,11 +24,14 @@ async function main() {
     logger.info(`API listening on port ${env.PORT}`);
   });
   Object.assign(server, SERVER_TIMEOUTS);
+  const stopReminders = env.DISABLE_REMINDERS === "true" ? () => {} : startReminderJob();
   server.maxRequestsPerSocket = 1000;
 
   const shutdown = (signal) => {
     logger.info({ signal }, "Shutting down");
+    stopReminders();
     server.close(async () => {
+      await flushNotifications().catch(() => {});
       await mongoose.disconnect().catch(() => {});
       process.exit(0);
     });

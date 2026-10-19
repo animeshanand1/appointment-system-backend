@@ -11,6 +11,7 @@ export class AppError extends Error {
 // See docs/architecture/04-api-specification.md §4.1 for the full catalogue.
 export const ErrorCodes = {
   VALIDATION_FAILED: 400,
+  INVALID_RESET_TOKEN: 400,
   MALFORMED_JSON: 400,
   UNAUTHENTICATED: 401,
   INVALID_CREDENTIALS: 401,
@@ -21,6 +22,8 @@ export const ErrorCodes = {
   DOCTOR_NOT_FOUND: 404,
   APPOINTMENT_NOT_FOUND: 404,
   TIME_OFF_NOT_FOUND: 404,
+  USER_NOT_FOUND: 404,
+  INVITE_NOT_FOUND: 404,
   EMAIL_ALREADY_REGISTERED: 409,
   SLOT_UNAVAILABLE: 409,
   PATIENT_TIME_CONFLICT: 409,
